@@ -1,0 +1,162 @@
+/* Import premium modern fonts */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap');
+
+/* Main Body & Theme Overrides */
+html, body, [data-testid="stAppViewContainer"] {
+    background-color: #0b0f19;
+    color: #e2e8f0;
+    font-family: 'Outfit', sans-serif;
+}
+
+[data-testid="stHeader"] {
+    background-color: rgba(11, 15, 25, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+/* Glassmorphism card container */
+.glass-card {
+    background: rgba(17, 24, 39, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+    margin-bottom: 20px;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.glass-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.2);
+}
+
+/* Main title styling with electric gradient */
+.gradient-text {
+    background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+    font-size: 2.8rem;
+    letter-spacing: -0.025em;
+    margin-bottom: 5px;
+}
+
+.subtitle-text {
+    color: #94a3b8;
+    font-size: 1.1rem;
+    margin-bottom: 30px;
+    font-weight: 300;
+}
+
+/* Custom metric card layout */
+.metric-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.metric-card {
+    flex: 1;
+    background: linear-gradient(145deg, rgba(20, 26, 43, 0.8) 0%, rgba(15, 20, 35, 0.8) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+}
+
+.metric-card.failures::before {
+    background: #f87171;
+}
+
+.metric-card.severity::before {
+    background: #fbbf24;
+}
+
+.metric-card.confidence::before {
+    background: #34d399;
+}
+
+.metric-title {
+    color: #64748b;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.metric-value {
+    color: #f8fafc;
+    font-size: 2rem;
+    font-weight: 800;
+}
+
+/* Status Pill Styling */
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.badge-build { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); }
+.badge-test { background: rgba(236, 72, 153, 0.15); color: #f472b6; border: 1px solid rgba(236, 72, 153, 0.3); }
+.badge-docker { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); }
+.badge-deployment { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-other { background: rgba(107, 114, 128, 0.15); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.3); }
+
+.severity-high { color: #f87171; font-weight: 800; }
+.severity-medium { color: #fbbf24; font-weight: 800; }
+.severity-low { color: #34d399; font-weight: 800; }
+
+/* Code and log snippet font formatting */
+.code-block {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    background-color: #05070c;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 15px;
+    overflow-x: auto;
+    color: #cbd5e1;
+    line-height: 1.5;
+}
+
+/* Sidebar styling overrides */
+[data-testid="stSidebar"] {
+    background-color: #080b13;
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* Streamlit Button overrides */
+.stButton>button {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.stButton>button:hover {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.5);
+    transform: translateY(-1px);
+}
