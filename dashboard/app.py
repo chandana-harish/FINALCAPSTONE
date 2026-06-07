@@ -231,41 +231,26 @@ if summary["total_failures"] > 0:
                     
                 class_badge_style = f"badge-{run_data.get('failure_classification', 'other')}"
 
-                st.markdown(textwrap.dedent(f"""
-                <div class="glass-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <span class="badge {class_badge_style}" style="font-size: 0.9rem; padding: 6px 14px;">
-                            {run_data.get('failure_classification', 'OTHER').upper()}
-                        </span>
-                        <div>Severity: {sev_badge}</div>
-                    </div>
-                    
-                    <h3 style="margin-top: 0;">{run_data.get('pipeline_name')} #{run_data.get('run_number')}</h3>
-                    <p style="color: #64748b; font-size: 0.9rem;">
-                        Project: <b>{run_data.get('project_name')}</b> | 
-                        Run ID: <code>{run_data.get('run_id')}</code> | 
-                        Analyzed at: {run_data.get('created_at', '')}
-                    </p>
-                    
-                    <hr style="border-color: rgba(255,255,255,0.05); margin: 20px 0;"/>
-                    
-                    <h4>🤖 AI Root Cause Diagnosis</h4>
-                    <p style="font-size: 1.05rem; line-height: 1.6; color: #f1f5f9;">
-                        {run_data.get('root_cause')}
-                    </p>
-                    
-                    <div style="background: rgba(16, 185, 129, 0.08); border-left: 4px solid #10b981; border-radius: 8px; padding: 15px; margin: 20px 0;">
-                        <h4 style="color: #34d399; margin-top: 0; margin-bottom: 8px;">💡 Recommended Fix Suggestion</h4>
-                        <div style="font-family: inherit; font-size: 0.95rem; line-height: 1.6; color: #e2e8f0; white-space: pre-line;">
-                            {run_data.get('fix_suggestion')}
-                        </div>
-                    </div>
-                    
-                    <p style="color: #64748b; font-size: 0.85rem;">
-                        Confidence Score: <b>{round(run_data.get('confidence_score', 0.0) * 100)}%</b>
-                    </p>
-                </div>
-                """), unsafe_allow_html=True)
+                st.markdown(f"""<div class="glass-card">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+<span class="badge {class_badge_style}" style="font-size: 0.9rem; padding: 6px 14px;">{run_data.get('failure_classification', 'OTHER').upper()}</span>
+<div>Severity: {sev_badge}</div>
+</div>
+<h3 style="margin-top: 0;">{run_data.get('pipeline_name')} #{run_data.get('run_number')}</h3>
+<p style="color: #64748b; font-size: 0.9rem;">
+Project: <b>{run_data.get('project_name')}</b> | 
+Run ID: <code>{run_data.get('run_id')}</code> | 
+Analyzed at: {run_data.get('created_at', '')}
+</p>
+<hr style="border-color: rgba(255,255,255,0.05); margin: 20px 0;"/>
+<h4>🤖 AI Root Cause Diagnosis</h4>
+<p style="font-size: 1.05rem; line-height: 1.6; color: #f1f5f9;">{run_data.get('root_cause')}</p>
+<div style="background: rgba(16, 185, 129, 0.08); border-left: 4px solid #10b981; border-radius: 8px; padding: 15px; margin: 20px 0;">
+<h4 style="color: #34d399; margin-top: 0; margin-bottom: 8px;">💡 Recommended Fix Suggestion</h4>
+<div style="font-family: inherit; font-size: 0.95rem; line-height: 1.6; color: #e2e8f0; white-space: pre-line;">{run_data.get('fix_suggestion')}</div>
+</div>
+<p style="color: #64748b; font-size: 0.85rem;">Confidence Score: <b>{round(run_data.get('confidence_score', 0.0) * 100)}%</b></p>
+</div>""", unsafe_allow_html=True)
                 
                 # Show raw failed log snippet in an expander
                 with st.expander("📝 View Raw Failed Task Log Snippet"):
