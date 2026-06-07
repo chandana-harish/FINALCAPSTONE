@@ -3,6 +3,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
+import textwrap
+
 
 # Import database client and settings
 # Since backend is in python path, we can import from it.
@@ -45,7 +47,7 @@ st.markdown('<div class="subtitle-text">Diagnostic platform for real-time pipeli
 
 if not db_available:
     st.error("⚠️ Database Connection Offline")
-    st.markdown(f"""
+    st.markdown(textwrap.dedent(f"""
     <div class="glass-card" style="border-left: 4px solid #f87171;">
         <h3>Could not connect to Azure Cosmos DB</h3>
         <p>Please make sure you have created your resources in the Azure Portal and configured your <code>.env</code> file with the correct credentials.</p>
@@ -59,7 +61,7 @@ if not db_available:
             <li><code>COSMOS_CONTAINER</code> - Container name (Default: <code>analysis_results</code>)</li>
         </ul>
     </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
     st.stop()
 
 # --- Load Data from Cosmos DB ---
@@ -98,12 +100,12 @@ if summary["total_failures"] > 0:
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
         <div class="metric-card failures">
             <div class="metric-title">Total Failures Analyzed</div>
             <div class="metric-value">{summary["total_failures"]}</div>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
         
     with col2:
         severity_class = "severity-low"
@@ -112,12 +114,12 @@ if summary["total_failures"] > 0:
         elif summary["avg_severity"] >= 4.0:
             severity_class = "severity-medium"
             
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
         <div class="metric-card severity">
             <div class="metric-title">Average Severity</div>
-            <div class="metric-value <span class='{severity_class}'>{summary["avg_severity"]}</span>/10</div>
+            <div class="metric-value"><span class="{severity_class}">{summary["avg_severity"]}</span>/10</div>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
         
     with col3:
         # Determine dominant category
@@ -125,12 +127,12 @@ if summary["total_failures"] > 0:
         top_cat = max(class_counts, key=class_counts.get) if class_counts else "None"
         top_cat_count = class_counts.get(top_cat, 0)
         
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
         <div class="metric-card confidence">
             <div class="metric-title">Top Failure Category</div>
             <div class="metric-value" style="font-size: 1.5rem; text-transform: uppercase;">{top_cat} ({top_cat_count})</div>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
     # Convert records to DataFrame for analysis
     df = pd.DataFrame(analyses)
@@ -229,7 +231,7 @@ if summary["total_failures"] > 0:
                     
                 class_badge_style = f"badge-{run_data.get('failure_classification', 'other')}"
 
-                st.markdown(f"""
+                st.markdown(textwrap.dedent(f"""
                 <div class="glass-card">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                         <span class="badge {class_badge_style}" style="font-size: 0.9rem; padding: 6px 14px;">
@@ -263,14 +265,14 @@ if summary["total_failures"] > 0:
                         Confidence Score: <b>{round(run_data.get('confidence_score', 0.0) * 100)}%</b>
                     </p>
                 </div>
-                """, unsafe_allow_html=True)
+                """), unsafe_allow_html=True)
                 
                 # Show raw failed log snippet in an expander
                 with st.expander("📝 View Raw Failed Task Log Snippet"):
                     st.markdown(f"**Failed Step:** `{run_data.get('failed_task_name')}`")
-                    st.markdown(f"""
+                    st.markdown(textwrap.dedent(f"""
                     <pre class="code-block">{run_data.get('log_snippet', 'No log snippet stored.')}</pre>
-                    """, unsafe_allow_html=True)
+                    """), unsafe_allow_html=True)
             else:
                 st.error("Failed to load run details. It might have been deleted.")
         else:
@@ -279,7 +281,7 @@ if summary["total_failures"] > 0:
 else:
     # Empty State (No records yet)
     st.info("👋 Welcome to the Failure Analyzer Platform!")
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <div class="glass-card" style="text-align: center; padding: 40px 20px;">
         <h2 style="color: #a5b4fc;">No failures analyzed yet</h2>
         <p style="max-width: 600px; margin: 15px auto; line-height: 1.6; color: #94a3b8;">
@@ -291,4 +293,4 @@ else:
             <code style="font-size: 1.1rem; padding: 8px 16px; background: #05070c; border-radius: 6px;">POST /webhook/cicd-failure</code>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
