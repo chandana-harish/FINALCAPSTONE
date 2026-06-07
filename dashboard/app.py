@@ -80,7 +80,6 @@ if st.sidebar.button("🔄 Refresh Data"):
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📊 Active Pipeline Scope")
 st.sidebar.info(
-    f"**Organization:** `{settings.ado_org_name}`\n\n"
     f"**Target DB:** `{settings.cosmos_database}`\n\n"
     f"**Model Engine:** `{settings.openai_model_name}`"
 )

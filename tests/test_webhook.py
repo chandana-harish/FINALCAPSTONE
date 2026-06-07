@@ -9,15 +9,14 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Set dummy environment variables for config class validation
-os.environ["ADO_ORG_NAME"] = "test-org"
-os.environ["ADO_PAT"] = "test-pat"
+os.environ["GITHUB_PAT"] = "test-github-pat"
 os.environ["OPENAI_API_KEY"] = "test-key"
 os.environ["OPENAI_MODEL_NAME"] = "gpt-4o"
 os.environ["COSMOS_URI"] = "https://test.documents.azure.com:443/"
 os.environ["COSMOS_KEY"] = "test-key"
 
 from backend.main import app
-from backend.services.azure_devops import ado_client
+from backend.services.github_service import github_client
 
 client = TestClient(app)
 
@@ -36,7 +35,7 @@ def test_log_cleaning_and_truncation():
         "2026-06-07T14:30:54.1234567Z ##[error] build failed with exit code 1\n"
     )
     
-    cleaned_log = ado_client.clean_and_truncate_log(raw_log)
+    cleaned_log = github_client.clean_and_truncate_log(raw_log)
     
     # Assert timestamp was stripped
     assert "2026-06-07T14:30:52.1234567Z" not in cleaned_log
@@ -45,16 +44,19 @@ def test_log_cleaning_and_truncation():
     assert "build failed with exit code 1" in cleaned_log
     assert "[EXTRACTED LOG SEGMENTS FOCUSING ON ERRORS]" in cleaned_log
 
-def test_webhook_successful_build_ignored():
-    # Payload for a successful build
+def test_webhook_successful_run_ignored():
+    # Payload for a successful GitHub workflow run
     payload = {
-        "eventType": "build.complete",
-        "resource": {
+        "action": "completed",
+        "workflow_run": {
             "id": 1234,
-            "buildNumber": "20260607.1",
-            "status": "succeeded",
-            "project": {"name": "TestProject"},
-            "definition": {"name": "TestPipeline"}
+            "run_number": 5,
+            "conclusion": "success",
+            "name": "Node CI/CD"
+        },
+        "repository": {
+            "name": "test-repo",
+            "owner": {"login": "test-owner"}
         }
     }
     
@@ -63,16 +65,19 @@ def test_webhook_successful_build_ignored():
     assert response.json()["status"] == "ignored"
 
 @patch("backend.main.process_failed_run")
-def test_webhook_failed_build_queued_classic(mock_process_task):
-    # Payload for a failed classic build
+def test_webhook_failed_run_queued(mock_process_task):
+    # Payload for a failed GitHub Actions run
     payload = {
-        "eventType": "build.complete",
-        "resource": {
+        "action": "completed",
+        "workflow_run": {
             "id": 9999,
-            "buildNumber": "20260607.9",
-            "result": "failed",
-            "project": {"name": "TestProject"},
-            "definition": {"name": "TestPipeline"}
+            "run_number": 12,
+            "conclusion": "failure",
+            "name": "Node CI/CD"
+        },
+        "repository": {
+            "name": "node-app",
+            "owner": {"login": "chandana-harish"}
         }
     }
     
@@ -82,51 +87,19 @@ def test_webhook_failed_build_queued_classic(mock_process_task):
     
     # Assert background task was scheduled with correct parsed values
     mock_process_task.assert_called_once_with(
-        project_name="TestProject",
-        pipeline_name="TestPipeline",
-        build_id=9999,
-        run_number="20260607.9"
-    )
-
-@patch("backend.main.process_failed_run")
-def test_webhook_failed_run_queued_yaml(mock_process_task):
-    # Payload for a failed YAML pipeline run (state-changed)
-    payload = {
-        "eventType": "ms.vss-pipelines.run-state-changed-event",
-        "resource": {
-            "run": {
-                "id": 8888,
-                "name": "20260607.2",
-                "state": "completed",
-                "result": "failed"
-            },
-            "pipeline": {
-                "name": "YAML-Pipeline"
-            },
-            "project": {
-                "name": "MyProject"
-            }
-        }
-    }
-    
-    response = client.post("/webhook/cicd-failure", json=payload)
-    assert response.status_code == 202
-    assert response.json()["status"] == "processing"
-    
-    # Assert background task was scheduled with correct parsed values
-    mock_process_task.assert_called_once_with(
-        project_name="MyProject",
-        pipeline_name="YAML-Pipeline",
-        build_id=8888,
-        run_number="20260607.2"
+        owner="chandana-harish",
+        repo="node-app",
+        pipeline_name="Node CI/CD",
+        run_id=9999,
+        run_number="12"
     )
 
 def test_webhook_malformed_payload():
     payload = {
-        "eventType": "build.complete",
-        "resource": {
-            # Missing run ID and project details
-            "result": "failed"
+        "action": "completed",
+        "workflow_run": {
+            # Missing ID
+            "conclusion": "failure"
         }
     }
     response = client.post("/webhook/cicd-failure", json=payload)

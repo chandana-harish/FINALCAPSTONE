@@ -3,9 +3,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
 class Settings(BaseSettings):
-    # Azure DevOps Configuration
-    ado_org_name: str = Field(..., validation_alias="ADO_ORG_NAME")
-    ado_pat: str = Field(..., validation_alias="ADO_PAT")
+    # GitHub Configuration
+    github_pat: str = Field(..., validation_alias="GITHUB_PAT")
 
     # OpenAI Configuration
     openai_api_key: str = Field(..., validation_alias="OPENAI_API_KEY")

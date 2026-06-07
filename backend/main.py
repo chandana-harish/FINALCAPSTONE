@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 
 from backend.config import settings
 from backend.database import db_client
-from backend.services.azure_devops import ado_client
+from backend.services.github_service import github_client
 from backend.services.openai_service import openai_analyzer
 
 # Setup logging
@@ -34,25 +34,26 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-async def process_failed_run(project_name: str, pipeline_name: str, build_id: int, run_number: str):
+async def process_failed_run(owner: str, repo: str, pipeline_name: str, run_id: int, run_number: str):
     """
-    Background worker task to fetch build details, timeline logs,
-    analyze with Azure OpenAI, and persist results in Cosmos DB.
+    Background worker task to fetch build details, job logs,
+    analyze with OpenAI, and persist results in Cosmos DB.
     """
-    logger.info(f"Processing failed run #{run_number} (ID: {build_id}) for project '{project_name}'")
+    project_name = f"{owner}/{repo}"
+    logger.info(f"Processing failed run #{run_number} (ID: {run_id}) for repo '{project_name}'")
     
     try:
-        # 1. Fetch failed logs from Azure DevOps REST API
-        log_data = await ado_client.fetch_failed_log_data(project_name, build_id)
+        # 1. Fetch failed logs from GitHub REST API
+        log_data = await github_client.fetch_failed_log_data(owner, repo, run_id)
         if not log_data:
-            logger.warning(f"No failure log data could be retrieved for build {build_id}.")
+            logger.warning(f"No failure log data could be retrieved for workflow run {run_id}.")
             return
             
         failed_task = log_data["failed_task_name"]
         cleaned_logs = log_data["cleaned_log_content"]
         raw_log_sample = log_data["raw_log_content"]
 
-        # 2. Analyze failure logs using Azure OpenAI Service
+        # 2. Analyze failure logs using OpenAI Service
         analysis = await openai_analyzer.analyze_failure(
             pipeline_name=pipeline_name,
             failed_task=failed_task,
@@ -63,8 +64,8 @@ async def process_failed_run(project_name: str, pipeline_name: str, build_id: in
         analysis_document = {
             "project_name": project_name,
             "pipeline_name": pipeline_name,
-            "run_id": str(build_id),
-            "run_number": run_number,
+            "run_id": str(run_id),
+            "run_number": str(run_number),
             "failed_task_name": failed_task,
             "root_cause": analysis["root_cause"],
             "fix_suggestion": analysis["fix_suggestion"],
@@ -77,17 +78,17 @@ async def process_failed_run(project_name: str, pipeline_name: str, build_id: in
 
         # 4. Save analysis results to Cosmos DB
         db_client.save_analysis(analysis_document)
-        logger.info(f"Successfully processed and stored failure report for build {build_id}")
+        logger.info(f"Successfully processed and stored failure report for run {run_id}")
 
     except Exception as e:
-        logger.error(f"Error executing failure analysis for build {build_id}: {e}", exc_info=True)
+        logger.error(f"Error executing failure analysis for run {run_id}: {e}", exc_info=True)
 
 
 @app.post("/webhook/cicd-failure", status_code=status.HTTP_202_ACCEPTED)
 async def receive_cicd_failure(request: Request, background_tasks: BackgroundTasks):
     """
-    Webhook receiver endpoint for Azure DevOps Service Hooks.
-    Parses payload to identify failed builds/runs, triggers analysis, and returns immediately.
+    Webhook receiver endpoint for GitHub Actions workflow_run events.
+    Parses payload to identify failed workflow runs, triggers analysis, and returns immediately.
     """
     try:
         payload = await request.json()
@@ -97,93 +98,66 @@ async def receive_cicd_failure(request: Request, background_tasks: BackgroundTas
             detail="Invalid JSON payload"
         )
     
-    logger.info("Received service hook webhook event from Azure DevOps")
+    logger.info("Received webhook event from GitHub Actions")
     logger.debug(f"Webhook payload: {payload}")
     
-    # 1. Extract event details (Handles both Build Completed and Run State Changed schemas)
-    event_type = payload.get("eventType")
-    resource = payload.get("resource", {})
+    # Extract GitHub workflow_run event details
+    action = payload.get("action")
+    workflow_run = payload.get("workflow_run", {})
+    repository = payload.get("repository", {})
     
-    project_name = None
-    pipeline_name = None
-    build_id = None
-    run_number = None
-    is_failed = False
+    # Extract fields
+    owner = repository.get("owner", {}).get("login")
+    repo = repository.get("name")
+    run_id = workflow_run.get("id")
+    run_number = workflow_run.get("run_number")
+    pipeline_name = workflow_run.get("name")
+    conclusion = workflow_run.get("conclusion")
     
-    # Schema A: ms.vss-pipelines.run-state-changed-event (YAML pipelines)
-    if "run" in resource:
-        run_data = resource.get("run", {})
-        pipeline_data = resource.get("pipeline", {})
-        project_data = resource.get("project", {})
-        
-        project_name = project_data.get("name")
-        pipeline_name = pipeline_data.get("name")
-        build_id = run_data.get("id")
-        run_number = run_data.get("name") # YAML run name contains run number
-        
-        # State can be 'completed', result can be 'failed'
-        state = run_data.get("state")
-        result = run_data.get("result")
-        is_failed = (state == "completed" and result == "failed")
-        
-    # Schema B: build.complete (Classic build pipelines)
-    else:
-        project_data = resource.get("project", {})
-        definition_data = resource.get("definition", {})
-        
-        project_name = project_data.get("name")
-        pipeline_name = definition_data.get("name")
-        build_id = resource.get("id")
-        run_number = resource.get("buildNumber")
-        
-        result = resource.get("result") or resource.get("status")
-        is_failed = (result == "failed")
-        
-    # Fallback to containers object if project is nested differently
-    if not project_name:
-        containers = payload.get("resourceContainers", {})
-        project_name = containers.get("project", {}).get("id") or "unknown-project"
-        
-    # Validate payload minimum requirements
-    if not build_id or not project_name:
-        logger.warning(f"Malformed payload. Missing buildId or project name. Payload: {payload}")
+    # Check if this is a completed workflow_run failure
+    if not run_id or not owner or not repo:
+        logger.warning(f"Malformed payload. Missing run_id, owner, or repo. Payload: {payload}")
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"error": "Missing required fields buildId or project_name"}
+            content={"error": "Missing required fields run_id, owner, or repo"}
         )
 
-    # 2. Skip analysis if the pipeline did not fail
+    # Verify if the action is completed and conclusion is failure
+    is_failed = (action == "completed" and conclusion == "failure")
+    
     if not is_failed:
-        logger.info(f"Build {build_id} in project '{project_name}' has status '{result or 'succeeded'}'. Skipping AI analysis.")
+        logger.info(f"Workflow run {run_id} in {owner}/{repo} has action '{action}' and conclusion '{conclusion}'. Skipping analysis.")
         return JSONResponse(
             status_code=status.HTTP_200_OK,
             content={
                 "status": "ignored", 
-                "message": f"Run status is not failed (Status: {result or 'succeeded'}). No action taken."
+                "message": f"Run status is not completed failure (Action: {action}, Conclusion: {conclusion}). No action taken."
             }
         )
         
     if not pipeline_name:
-        pipeline_name = f"Pipeline-{build_id}"
+        pipeline_name = f"Workflow-{run_id}"
     if not run_number:
-        run_number = str(build_id)
+        run_number = str(run_id)
 
-    # 3. Schedule asynchronous background processing to prevent webhook timeouts
+    # Schedule background analysis
     background_tasks.add_task(
         process_failed_run,
-        project_name=project_name,
+        owner=owner,
+        repo=repo,
         pipeline_name=pipeline_name,
-        build_id=build_id,
-        run_number=run_number
+        run_id=run_id,
+        run_number=str(run_number)
     )
     
     return {
         "status": "processing",
-        "message": "Failure analysis triggered in the background.",
+        "message": "GitHub workflow run failure analysis triggered in the background.",
         "details": {
-            "project": project_name,
+            "owner": owner,
+            "repo": repo,
             "pipeline": pipeline_name,
-            "run_id": build_id,
+            "run_id": run_id,
             "run_number": run_number
         }
     }
