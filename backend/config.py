@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
@@ -7,8 +8,12 @@ class Settings(BaseSettings):
     github_pat: str = Field(..., validation_alias="GITHUB_PAT")
 
     # OpenAI Configuration
-    openai_api_key: str = Field(..., validation_alias="OPENAI_API_KEY")
+    openai_api_key: Optional[str] = Field(None, validation_alias="OPENAI_API_KEY")
     openai_model_name: str = Field("gpt-4o", validation_alias="OPENAI_MODEL_NAME")
+
+    # Gemini Configuration
+    gemini_api_key: Optional[str] = Field(None, validation_alias="GEMINI_API_KEY")
+    gemini_model_name: str = Field("gemini-2.5-flash", validation_alias="GEMINI_MODEL_NAME")
 
     # Azure Cosmos DB Configuration
     cosmos_uri: str = Field(..., validation_alias="COSMOS_URI")
