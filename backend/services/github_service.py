@@ -10,10 +10,11 @@ class GitHubServiceClient:
     def __init__(self):
         self.pat = settings.github_pat
         self.headers = {
-            "Authorization": f"Bearer {self.pat}",
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28"
         }
+        if self.pat:
+            self.headers["Authorization"] = f"Bearer {self.pat}"
         self.base_url = "https://api.github.com"
 
     async def get_workflow_jobs(self, owner: str, repo: str, run_id: int) -> List[Dict[str, Any]]:
