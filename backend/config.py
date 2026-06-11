@@ -5,7 +5,7 @@ from pydantic import Field
 
 class Settings(BaseSettings):
     # GitHub Configuration
-    github_pat: str = Field(..., validation_alias="GITHUB_PAT")
+    github_pat: Optional[str] = Field(None, validation_alias="GITHUB_PAT")
 
     # OpenAI Configuration
     openai_api_key: Optional[str] = Field(None, validation_alias="OPENAI_API_KEY")
