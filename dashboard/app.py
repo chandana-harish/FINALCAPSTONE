@@ -79,11 +79,14 @@ if st.sidebar.button("🔄 Refresh Data"):
     st.cache_data.clear()
     st.rerun()
 
+# Determine active model engine display
+active_model = settings.gemini_model_name if settings.gemini_api_key else settings.openai_model_name
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📊 Active Pipeline Scope")
 st.sidebar.info(
     f"**Target DB:** `{settings.cosmos_database}`\n\n"
-    f"**Model Engine:** `{settings.openai_model_name}`"
+    f"**Model Engine:** `{active_model}`"
 )
 
 st.sidebar.markdown("---")
