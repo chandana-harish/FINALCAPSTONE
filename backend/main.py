@@ -166,3 +166,42 @@ async def receive_cicd_failure(request: Request, background_tasks: BackgroundTas
 def health_check():
     """Simple health check endpoint."""
     return {"status": "healthy", "service": settings.api_title}
+
+@app.get("/test-db")
+def test_db():
+    """Diagnostics endpoint to check DB and Environment config."""
+    db_status = "unknown"
+    db_error = None
+    items_count = 0
+    items_preview = []
+    
+    try:
+        db_client.initialize()
+        db_status = "connected"
+        items = db_client.get_analyses(limit=10)
+        items_count = len(items)
+        items_preview = [{
+            "id": item.get("id"),
+            "project_name": item.get("project_name"),
+            "pipeline_name": item.get("pipeline_name"),
+            "run_id": item.get("run_id"),
+            "created_at": item.get("created_at")
+        } for item in items]
+    except Exception as e:
+        db_status = "error"
+        db_error = str(e)
+        
+    return {
+        "db_status": db_status,
+        "db_error": db_error,
+        "items_count": items_count,
+        "items_preview": items_preview,
+        "config": {
+            "has_cosmos_uri": bool(settings.cosmos_uri),
+            "cosmos_uri_prefix": settings.cosmos_uri[:20] if settings.cosmos_uri else None,
+            "has_cosmos_key": bool(settings.cosmos_key),
+            "has_gemini_key": bool(settings.gemini_api_key),
+            "gemini_key_prefix": settings.gemini_api_key[:10] if settings.gemini_api_key else None,
+            "has_openai_key": bool(settings.openai_api_key),
+        }
+    }
